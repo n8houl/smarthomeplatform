@@ -4,6 +4,18 @@ from urllib.parse import urlparse
 import sys
 import json
 
+import _thread
+
+token = ""
+with open("token", "r") as f:
+	token = f.readline().replace('\n', '')
+
+def get_target_temperature(therm):
+	return get("/devices/thermostats/%s/target_temperature_f" % therm)
+
+def set_target_temperature(therm, temp):
+	body = "{ \"target_temperature_f\": %d }" % temp
+	return put("/devices/thermostats/%s" % therm, body)
 
 # First Use
 def getToken(client_id, client_secret, grant_type, code):
@@ -63,6 +75,23 @@ def put(url, body):
 	data = response.read()
 	return data.decode("utf-8")
 
-print(getToken(client_id, client_secret, grant_type, code))
-#print(get("/devices/thermostats/1eNZXbW1J0bFp-OmrOwz7w0IofQbe_-8/target_temperature_f"))
+def listen_for_temp_change(name, therm):
+	t = int(get_target_temperature(therm))
+	while True:
+		new_t = int(get_target_temperature(therm))
+		if t != new_t:
+			print(new_t)
+			t = new_t
+
+#print(getToken(client_id, client_secret, grant_type, code))
+print(get_target_temperature('1eNZXbW1J0bFp-OmrOwz7w0IofQbe_-8'))
+print(set_target_temperature('1eNZXbW1J0bFp-OmrOwz7w0IofQbe_-8', 72))
 #print(put("/devices/thermostats/1eNZXbW1J0bFp-OmrOwz7w0IofQbe_-8", "{ \"target_temperature_f\": 70 }"))
+
+try:
+	_thread.start_new_thread(listen_for_temp_change, ('Thread-2', '1eNZXbW1J0bFp-OmrOwz7w0IofQbe_-8',))
+except:
+	print('Error opening thread')
+
+while True:
+	pass
